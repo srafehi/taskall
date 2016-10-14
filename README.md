@@ -23,8 +23,9 @@ with parallel_task() as tasker:
     result = future.result
 
 
-# Distribute our function and data across multiple pools
-with parallel_pool(pool_size=1) as pool:
+# Send our data to our process pool and execute our
+# function in parallel
+with parallel_pool(pool_size=8) as pool:
     futures = pool.map(func, data_list)
 
     # Retrieve the results as they are completed
