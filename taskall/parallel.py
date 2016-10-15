@@ -1,6 +1,12 @@
 import multiprocessing
 import time
-from taskall.base import TaskExecutorBase, TaskerBase, TaskerPoolBase
+from .base import TaskExecutorBase, TaskerBase, TaskerPoolBase
+import sys
+
+if sys.version_info >= (3, 0):
+    import queue
+else:
+    import Queue as queue
 
 __author__ = 'shadyrafehi'
 
@@ -35,11 +41,10 @@ class TaskExecutor(TaskExecutorBase):
         self._task_counter.pop(0)
 
     def listen(self):
-        import Queue
         while self.is_alive:
             try:
                 self.execute(*self.input.get(timeout=0.00001))
-            except Queue.Empty:
+            except queue.Empty:
                 time.sleep(0.02)
 
 
@@ -103,7 +108,7 @@ class TaskerPool(TaskerPoolBase):
         if not isinstance(pool_size, int) or pool_size < 1:
             raise ValueError('The TaskerPool pool_size parameter can only be an integer greater than 0, or None')
 
-        taskers = [Tasker(task_id=i) for i in xrange(pool_size)]
+        taskers = [Tasker(task_id=i) for i in range(pool_size)]
         super(TaskerPool, self).__init__(taskers)
 
     @staticmethod

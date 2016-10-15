@@ -1,6 +1,6 @@
 import time
 
-from taskall.util import deserialize
+from .util import deserialize
 
 __author__ = 'shadyrafehi'
 
@@ -26,6 +26,8 @@ class FutureGenerator(object):
 
         # Return next recieved
         return self.futures.pop(0).result
+
+    __next__ = next
 
 
 class Future(object):
@@ -95,6 +97,11 @@ class FutureCollection(object):
         :param futures: collections.Iterable[Future]
         """
         self._futures = list(futures)
+
+    @property
+    def results(self):
+        self.run_until_completion()
+        return iter(self)
 
     def run_until_completion(self):
         """

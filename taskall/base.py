@@ -4,7 +4,7 @@ from threading import Thread
 import time
 import functools
 
-from future import Future, FutureCollection
+from .future import Future, FutureCollection
 from taskall.util import deserialize, serialize
 
 
