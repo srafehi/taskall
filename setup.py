@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='taskall',
-    version='0.1dev',
+    version='0.1.0',
     install_requires=['dill'],
     packages=['taskall'],
     license='MIT',
