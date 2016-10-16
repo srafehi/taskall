@@ -1,14 +1,23 @@
 import multiprocessing
+from multiprocessing.managers import RemoteError
 import time
-from .base import TaskExecutorBase, TaskerBase, TaskerPoolBase
 import sys
+from ..base import TaskExecutorBase, TaskerBase, TaskerPoolBase
+
 
 if sys.version_info >= (3, 0):
     import queue
 else:
     import Queue as queue
 
-__author__ = 'shadyrafehi'
+
+def capture_termination(func):
+    def wrap(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except(RemoteError, IOError, EOFError):
+            exit(0)
+    return wrap
 
 
 class TaskExecutor(TaskExecutorBase):
@@ -31,12 +40,15 @@ class TaskExecutor(TaskExecutorBase):
         self.listen()
 
     @property
+    @capture_termination
     def is_alive(self):
         return self._shared_data[0]
 
+    @capture_termination
     def _set_result(self, key, data):
         self.output[key] = data
 
+    @capture_termination
     def _decrement_counter(self, key):
         self._task_counter.pop(0)
 
@@ -118,3 +130,4 @@ class TaskerPool(TaskerPoolBase):
         :rtype: int
         """
         return multiprocessing.cpu_count()
+

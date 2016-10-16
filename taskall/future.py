@@ -20,7 +20,7 @@ class FutureGenerator(object):
 
         # If next in line has been received, don't check rest
         if not self.futures[0].result_recieved:
-            while not any(Future._results_received(self.futures)):
+            while not any(Future.results_received(self.futures)):
                 Future.sort_by_completion(self.futures)
                 time.sleep(0.025)
 
@@ -38,7 +38,7 @@ class Future(object):
         self._result_received = False
 
         def callback_wrapper(*args, **kwargs):
-            self.__result = deserialize(callback(*args,**kwargs))
+            self.__result = deserialize(callback(*args, **kwargs))
             self._result_received = True
             if issubclass(type(self.__result), Exception):
                 raise self.__result
@@ -76,12 +76,12 @@ class Future(object):
         futures.sort(key=lambda f: f.check(), reverse=True)
 
     @classmethod
-    def _results_received(cls, futures):
+    def results_received(cls, futures):
         return [f.result_recieved for f in futures]
 
     @classmethod
     def complete(cls, futures):
-        while not all(cls._results_received(futures)):
+        while not all(cls.results_received(futures)):
             cls.sort_by_completion(futures)
 
     @classmethod
@@ -89,28 +89,25 @@ class Future(object):
         return FutureGenerator(futures)
 
 
-class FutureCollection(object):
+class FutureCollection(tuple):
     """Collection of Future objects"""
-
-    def __init__(self, futures):
-        """
-        :param futures: collections.Iterable[Future]
-        """
-        self._futures = list(futures)
 
     @property
     def results(self):
         self.run_until_completion()
-        return iter(self)
+        return tuple(iter(self))
+
+    def iterfutures(self):
+        return iter(super(FutureCollection, self).__iter__())
 
     def run_until_completion(self):
         """
         Wait until all futures are complete
         """
-        Future.complete(self._futures)
+        Future.complete(list(self.iterfutures()))
 
     def __iter__(self):
-        return Future.iter(self._futures)
+        return Future.iter(self.iterfutures())
 
     def __repr__(self):
-        return '{}{}'.format(type(self).__name__, repr(self._futures))
+        return '{}{}'.format(type(self).__name__, tuple(self.iterfutures()))

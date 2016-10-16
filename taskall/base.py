@@ -14,7 +14,7 @@ class TaskExecutorBase(object):
     @property
     def is_alive(self):
         """
-        Checks to see of the calling Tasker has terminated
+        Checks to see if the calling Tasker has terminated
 
         :rtype: bool
         """
@@ -154,12 +154,15 @@ class TaskerBase(object):
         :type func: () -> Any
         :rtype: () -> taskall.future.Future
         """
+        self._raise_if_terminated()
 
         if hasattr(func, '_parent_tasker'):
             if func._parent_tasker == self:
                 return func
             elif hasattr(func, '_original_func'):
                 func = func._original_func
+            else:
+                raise AssertionError('Could not taskify function')
 
         @functools.wraps(func)
         def inner(*args, **kwargs):
@@ -190,7 +193,13 @@ class TaskerBase(object):
         """
         return self.taskify(func)(*args, **kwargs)
 
+    def _raise_if_terminated(self):
+        if self.has_terminated():
+            raise IOError('{} has already terminated'.format(self))
+
     def _add_task(self, func, args=(), kwargs=None):
+
+        self._raise_if_terminated()
 
         if kwargs is None:
             kwargs = {}
@@ -200,10 +209,9 @@ class TaskerBase(object):
         def callback(timeout=0):
             t0 = time.time() + timeout
             while not self._has_result(key):
+                self._raise_if_terminated()
                 if timeout and time.time() > t0:
                     raise KeyError(key)
-                if self.has_terminated():
-                    raise IOError('{} has already terminated'.format(self))
             if self.single_job:
                 self.terminate()
             return self._get_result(key)
@@ -225,6 +233,35 @@ class TaskerPoolBase(object):
         :type taskers: collections.Iterable[Tasker]
         """
         self.taskers = taskers
+        self.__terminated = False
+
+    @property
+    def pool_size(self):
+        return len(self.taskers)
+
+    def poolify(self, func):
+        """
+        Converts a function into a pooled function which returns a Future
+
+        :type func: () -> Any
+        :rtype: () -> taskall.future.Future
+        """
+        self._raise_if_terminated()
+        if hasattr(func, '_parent_pool'):
+            if func._parent_pool == self:
+                return func
+            elif hasattr(func, '_original_func'):
+                func = func._original_func
+            else:
+                raise AssertionError('Could not poolify function')
+
+        @functools.wraps(func)
+        def inner(*args, **kwargs):
+            return self.add_task(func, *args, **kwargs)
+
+        inner._parent_pool = self
+        inner._original_func = func
+        return inner
 
     def map(self, func, *params):
         """
@@ -238,10 +275,14 @@ class TaskerPoolBase(object):
         :return: A collection of Future objects
         :rtype: FutureCollection
         """
-        return FutureCollection(futures=[self.__min_tasker.add_task(func, *param) for param in zip(*params)])
+        return FutureCollection(self.__min_tasker.add_task(func, *param) for param in zip(*params))
 
     def __len__(self):
         return sum(len(t) for t in self.taskers)
+
+    def add_task(self, func, *args, **kwargs):
+        self._raise_if_terminated()
+        return self.__min_tasker.add_task(func, *args, **kwargs)
 
     @property
     def __min_tasker(self):
@@ -251,12 +292,17 @@ class TaskerPoolBase(object):
         """
         return min(self.taskers, key=len)
 
+    def _raise_if_terminated(self):
+        if self.__terminated:
+            raise IOError('{} has already terminated'.format(self))
+
     def terminate(self):
         """
         Terminates all Taskers which are still active
         """
         for t in self.taskers:
             t.terminate()
+        self.__terminated = True
 
     def __enter__(self):
         return self

@@ -4,7 +4,5 @@ __author__ = 'Shady Rafehi'
 __license__ = 'MIT'
 __version__ = '0.1dev'
 
-from .parallel import *
-
-parallel_task = Tasker
-parallel_pool = TaskerPool
+from . import base, future
+from . import parallel
