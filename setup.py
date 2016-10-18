@@ -2,9 +2,12 @@ from setuptools import setup
 
 setup(
     name='taskall',
-    version='0.1.0',
+    version='0.1.1',
     install_requires=['dill'],
-    packages=['taskall'],
+    packages=[
+        'taskall',
+        'taskall.parallel'
+    ],
     license='MIT',
     url='https://github.com/srafehi/taskall',
     keywords=['parallel', 'pool', 'multiprocessing'],
